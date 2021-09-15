@@ -6,6 +6,7 @@ import (
 	"google.golang.org/api/drive/v3"
 	"google.golang.org/api/googleapi"
 	"io"
+	"strings"
 	"text/tabwriter"
 )
 
@@ -23,7 +24,7 @@ type ListFilesArgs struct {
 func (self *Drive) List(args ListFilesArgs) (err error) {
 	listArgs := listAllFilesArgs{
 		query:     args.Query,
-		fields:    []googleapi.Field{"nextPageToken", "files(id,name,md5Checksum,mimeType,size,createdTime,parents)"},
+		fields:    []googleapi.Field{"nextPageToken", "files(id,name,md5Checksum,mimeType,size,createdTime,parents,teamDriveId,driveId)"},
 		sortOrder: args.SortOrder,
 		maxFiles:  args.MaxFiles,
 	}
@@ -72,9 +73,9 @@ func (self *Drive) listAllFiles(args listAllFilesArgs) ([]*drive.File, error) {
 		pageSize = 1000
 	}
 
-	controlledStop := fmt.Errorf("Controlled stop")
+	controlledStop := fmt.Errorf("controlled stop")
 
-	err := self.service.Files.List().Q(args.query).Fields(args.fields...).OrderBy(args.sortOrder).PageSize(pageSize).Pages(context.TODO(), func(fl *drive.FileList) error {
+	err := self.service.Files.List().Corpora("allDrives").SupportsAllDrives(true).IncludeItemsFromAllDrives(true).Q(args.query).Fields(args.fields...).OrderBy(args.sortOrder).PageSize(pageSize).Pages(context.TODO(), func(fl *drive.FileList) error {
 		files = append(files, fl.Files...)
 
 		// Stop when we have all the files we need
@@ -110,16 +111,24 @@ func PrintFileList(args PrintFileListArgs) {
 	w.Init(args.Out, 0, 0, 3, ' ', 0)
 
 	if !args.SkipHeader {
-		fmt.Fprintln(w, "Id\tName\tType\tSize\tCreated")
+		fmt.Fprintln(w, "Id\tName\tType\tSize\tCreated\tParents\tTeam Drive ID\tDrive ID")
 	}
 
 	for _, f := range args.Files {
-		fmt.Fprintf(w, "%s\t%s\t%s\t%s\t%s\n",
+		parent := "-"
+		if len(f.Parents) > 0 {
+			parent = strings.Join(f.Parents[:], ", ")
+		}
+
+		fmt.Fprintf(w, "%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n",
 			f.Id,
 			truncateString(f.Name, args.NameWidth),
 			filetype(f),
 			formatSize(f.Size, args.SizeInBytes),
 			formatDatetime(f.CreatedTime),
+			parent,
+			f.TeamDriveId,
+			f.DriveId,
 		)
 	}
 

@@ -2,6 +2,7 @@ package drive
 
 import (
 	"fmt"
+	"google.golang.org/api/googleapi"
 	"math"
 	"os"
 	"path/filepath"
@@ -166,4 +167,14 @@ func openFile(path string) (*os.File, os.FileInfo, error) {
 	}
 
 	return f, info, nil
+}
+
+func removeFieldFromFields(fields []googleapi.Field, field googleapi.Field) []googleapi.Field {
+	var cleanFields []googleapi.Field
+	for _, f := range fields {
+		if f != field {
+			cleanFields = append(cleanFields, f)
+		}
+	}
+	return cleanFields
 }

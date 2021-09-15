@@ -3,6 +3,7 @@ package drive
 import (
 	"fmt"
 	"google.golang.org/api/drive/v3"
+	"google.golang.org/api/googleapi"
 	"io"
 )
 
@@ -13,7 +14,8 @@ type FileInfoArgs struct {
 }
 
 func (self *Drive) Info(args FileInfoArgs) error {
-	f, err := self.service.Files.Get(args.Id).Fields("id", "name", "size", "createdTime", "modifiedTime", "md5Checksum", "mimeType", "parents", "shared", "description", "webContentLink", "webViewLink").Do()
+	fields := []googleapi.Field{"id", "name", "size", "createdTime", "modifiedTime", "md5Checksum", "mimeType", "shared", "description", "webContentLink", "webViewLink", "parents"}
+	f, err := self.service.Files.Get(args.Id).SupportsAllDrives(true).Fields(fields...).Do()
 	if err != nil {
 		return fmt.Errorf("Failed to get file: %s", err)
 	}
